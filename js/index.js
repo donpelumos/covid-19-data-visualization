@@ -1,6 +1,5 @@
 let PARAMETERS = {
     DATA : [],
-    POPULATIONS : {AF:"458","AL":"595","DZ":"2197","AD":"521","AO":"11","AI":"3","AG":"16","AR":"1524","AM":"1135","AW":"89","AU":"6040","AT":"13639","AZ":"1536","BS":"26","BH":"1860","BD":"1403","BB":"47","BY":"4388","BE":"12731","BZ":"16","BJ":"50","BM":"59","BT":"5","BO":"198","BA":"928","BW":"8","BR":"51370","":"6","BG":"384","BF":"555","BI":"7","KH":"120","CM":"1000","CA":"28171","KY":"30","TD":"43","CL":"11189","CN":"78722","CO":"2148","KM":"0","CG":"30","CD":"103","CR":"428","HR":"1601","CU":"1001","CY":"296","CZ":"4214","DK":"7678","DJ":"755","DM":"14","DO":"1960","EC":"3433","EG":"1815","SV":"245","GQ":"13","ER":"30","EE":"264","ET":"93","FJ":"14","FI":"3500","FR":"53972","GF":"112","GA":"99","GM":"9","GE":"275","DE":"139900","GH":"303","GI":"136","GR":"1374","GL":"11","GD":"13","GP":"104","GT":"86","GN":"597","GW":"24","GY":"27","HT":"10","HN":"132","HK":"932","HU":"801","IS":"1750","IN":"15331","ID":"2317","IR":"81587","IQ":"1602","IE":"17110","IM":"271","IL":"10637","IT":"93245","CI":"721","JM":"57","JP":"4496","JO":"377","KZ":"1408","KE":"190","XK":"490","KW":"2219","KG":"637","LV":"464","LB":"206","LR":"75","LY":"24","LI":"55","LT":"718","LU":"3452","MG":"101","MW":"9","MY":"4702","MV":"20","ML":"261","MT":"407","MQ":"83","MR":"6","MU":"320","YT":"352","MX":"17781","MD":"1658","MC":"82","MN":"13","ME":"261","MS":"7","MA":"2017","MZ":"21","MM":"50","NA":"8","NP":"22","NL":"89","NC":"18","NZ":"1332","NI":"7","NE":"561","NG":"534","MK":"1057","NO":"32","OM":"888","PK":"6464","PA":"859","PG":"8","PY":"142","PE":"17527","PH":"1506","PL":"4862","PT":"2076","QA":"2070","RE":"300","RO":"5788","RU":"21327","RW":"130","LC":"15","MF":"29","SM":"97","SA":"6783","SN":"493","RS":"1971","SC":"8","SL":"54","SG":"1634","SK":"762","SI":"246","SO":"87","ZA":"3153","KR":"9419","ES":"159359","LK":"215","SD":"80","SR":"9","SE":"4074","CH":"25700","SY":"27","TW":"347","TJ":"0","TZ":"167","TH":"2772","TL":"20","TG":"77","TT":"103","TN":"591","TR":"78202","UG":"55","UA":"2396","AE":"3359","GB":"872","US":"213109","UY":"486","UZ":"1577","VE":"176","VN":"232","EH":"5","YE":"1","ZM":"101","ZW":"5"},
     COUNTRIES : []
 };
 
@@ -10,13 +9,16 @@ $(document).ready(function(){
         readCountries(data);
     })();
 
-    
+    $("#world-map-selector").change(function(){
+        let selection = $(this).children("option:selected").val();
+        reDrawWorldMap(selection);
+    });
 });
 
 function readCountries(data){
     data.forEach((countryInfo) => {
-        PARAMETERS.COUNTRIES.push({countryName: countryInfo.country_name, population: parseInt(countryInfo.population),
-            countryCode: countryInfo.country_code, countryCodeThree: countryInfo.country_code_three});
+        PARAMETERS.COUNTRIES.push({countryName: countryInfo.country_name, population: parseInt(countryInfo.population), countryCode: countryInfo.country_code,
+            countryCodeThree: countryInfo.country_code_three, countryCapital: countryInfo.capital});
     });
     (async () => {
         const data = await d3.csv('js/covid-data.csv');
@@ -31,6 +33,12 @@ function readDataFile(data) {
             if(country.countryCodeThree == countryCovidData.iso_code){
                 country.totalCases = parseInt(countryCovidData.total_cases);
                 country.totalDeaths = parseInt(countryCovidData.total_deaths);
+                country.recentDate = formatDate(countryCovidData.date);
+                let infectionRate = (parseFloat(countryCovidData.total_cases)/parseFloat(country.population))*100;
+                country.infectionRate = parseFloat(infectionRate.toLocaleString());
+                let mortalityRate = (parseFloat(countryCovidData.total_deaths)/parseFloat(countryCovidData.total_cases))*100;
+                country.mortalityRate = parseFloat(mortalityRate.toLocaleString());
+
             }
         });
     });
@@ -38,16 +46,51 @@ function readDataFile(data) {
 }
 
 function showMap(){
+    let mapCoronaCases = {};
+    PARAMETERS.COUNTRIES.forEach((country) => {
+        mapCoronaCases[country.countryCode] = country.totalCases;
+    });
+    drawWorldMap(mapCoronaCases);
+}
+
+function reDrawWorldMap(selection){
     let mapPopulations = {};
+    let mapCoronaCases = {};
+    let mapCoronaDeaths = {};
+    let mapCoronaInfectionRates = {};
+    let mapCoronaDeathRates = {};
     PARAMETERS.COUNTRIES.forEach((country) => {
         mapPopulations[country.countryCode] = country.population;
+        mapCoronaCases[country.countryCode] = country.totalCases == null || isNaN(country.totalCases) == null || country.totalCases == undefined ? 0 : country.totalCases;
+        mapCoronaDeaths[country.countryCode] = country.totalDeaths == null || isNaN(country.totalDeaths) == null || country.totalDeaths == undefined ? 0 : country.totalDeaths;
+        mapCoronaInfectionRates[country.countryCode] = country.infectionRate == null || isNaN(country.infectionRate) || country.infectionRate == undefined ? 0 : country.infectionRate;
+        mapCoronaDeathRates[country.countryCode] = country.mortalityRate == null || isNaN(country.mortalityRate) || country.mortalityRate == undefined ? 0 : country.mortalityRate;
     });
+    if(selection == "total-cases"){
+        drawWorldMap(mapCoronaCases);
+    }
+    else if(selection == "population"){
+        drawWorldMap(mapPopulations);
+    }
+    else if(selection == "total-deaths"){
+        drawWorldMap(mapCoronaDeaths);
+    }
+    else if(selection == "infection-rates"){
+        drawWorldMap(mapCoronaInfectionRates);
+    }
+    else if(selection == "mortality-rates"){
+        drawWorldMap(mapCoronaDeathRates);
+    }
+}
+
+function drawWorldMap(data){
+    $("#world-map").html("");
     $('#world-map').vectorMap({
         map: 'world_mill',
         series:{
             regions: [{
-                values: mapPopulations,
-                scale: ['#9b0908', '#37b40e'],
+                values: data,
+                scale: ['#0db51b', '#b41407'],
                 normalizeFunction: 'polynomial',
                 legend: {
                     vertical: true,
@@ -55,9 +98,13 @@ function showMap(){
             }]
         },
         onRegionTipShow: function(e, el, code){
-            el.html(el.html()+ "<br>Population - " + mapPopulations[code].toLocaleString() +
+            el.html(el.html().toUpperCase()+ "<br> Capital - "+getCountryObject(code).countryCapital +
+                "<br>Population - " + getCountryObject(code).population.toLocaleString() +
                 "<br> Total Cases - "+getCountryObject(code).totalCases.toLocaleString() +
-            "<br> Total Deaths - "+ getCountryObject(code).totalDeaths.toLocaleString());
+                "<br> Total Deaths - "+ getCountryObject(code).totalDeaths.toLocaleString() +
+                "<br> Date - "+ getCountryObject(code).recentDate.toLocaleString() +
+                "<br> Infection Rate - "+ getCountryObject(code).infectionRate.toLocaleString()+"%"+
+                "<br> Mortality Rate - "+ getCountryObject(code).mortalityRate.toLocaleString()+"%");
         }
     });
 }
@@ -70,6 +117,17 @@ function getCountryObject(countryCode){
         }
     });
     return countryObject;
+}
+
+function formatDate(dateString){
+    if(dateString == null || dateString == "" || dateString == undefined){
+        return "";
+    }
+    let year = dateString.split("-")[0];
+    let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let month = months[parseInt(dateString.split("-")[1]) - 1];
+    let day = parseInt(dateString.split("-")[2]);
+    return month+" "+day+", "+year;
 }
 
 
