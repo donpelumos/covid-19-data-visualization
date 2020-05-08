@@ -63,6 +63,7 @@ function showMap(){
     drawWorldMap(mapCoronaCases);
     fetchAllCasesDetails();
     fetchAllMortalityDetails();
+    fetchAllInfectionDetails();
 }
 
 function reDrawWorldMap(selection){
@@ -254,6 +255,53 @@ function fetchAllMortalityDetails(){
         colours: [colour1,colour2]});
 }
 
+function fetchAllInfectionDetails(){
+    let allInfectionCasesForAssignedCountry = [];
+    let allInfectionCasesForNeighbourOne = [];
+    let allInfectionCasesForNeighbourTwo = [];
+    let allInfectionCasesForEurope = [];
+    let allInfectionCasesForWorld = [];
+    let allDates = [];
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        let country = getCountryObjectWithThreeCode(countryCovidData.iso_code);
+        let infectionRate = parseFloat(((parseFloat(countryCovidData.total_cases)/parseFloat(country.population))*100).toLocaleString());
+        if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.countryCodeThree){
+            allInfectionCasesForAssignedCountry.push({label: formatDateForGraph(countryCovidData.date), value: infectionRate});
+        }
+        else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[0].countryCodeThree){
+            allInfectionCasesForNeighbourOne.push({label: formatDateForGraph(countryCovidData.date), value: infectionRate});
+        }
+        else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[1].countryCodeThree){
+            allInfectionCasesForNeighbourTwo.push({label: formatDateForGraph(countryCovidData.date), value: infectionRate});
+        }
+        if(!allDates.includes(countryCovidData.date)){
+            allDates.push(countryCovidData.date);
+        }
+    });
+    allDates.forEach((dateString) => {
+        allInfectionCasesForEurope.push(getTotalEuropeInfectionCasesForDate(dateString));
+        allInfectionCasesForWorld.push(getTotalWorldInfectionCasesForDate(dateString));
+    });
+    allInfectionCasesForEurope.sort((a, b) => b.label - a.label);
+    allInfectionCasesForWorld.sort((a, b) => b.label - a.label)
+    let colour5 = '#ed4900';
+    let colour4 = '#090574';
+    let colour3 = '#006f0d';
+    let colour2 = '#cb16af';
+    let colour1 = '#00a2b4';
+    const options = {
+        format: 'd',
+        yLabel: 'Infection Cases',
+        title: ' '
+    };
+
+    drawLineChart({data3: allInfectionCasesForAssignedCountry, data2:  allInfectionCasesForNeighbourTwo, data:allInfectionCasesForNeighbourOne,
+        selector: "#container-infected-corona-cases svg", option: options,
+        colours: [colour4,colour3,colour5]});
+    drawLineChart2({data2: allInfectionCasesForWorld, data:allInfectionCasesForEurope , selector: "#container-infected-corona-cases-global svg", option: options,
+        colours: [colour2,colour1]});
+}
+
 function formatDateForGraph(dateString){
     let format = "%Y-%m-%d";
     let dateParser = d3.timeParse(format);
@@ -280,6 +328,16 @@ function getTotalEuropeMortalityCasesForDate(dateString){
     return {label: formatDateForGraph(dateString), value: totalCases};
 }
 
+function getTotalEuropeInfectionCasesForDate(dateString){
+    let totalCases = 0;
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(getCountryObjectWithThreeCode(countryCovidData.iso_code).continent == "EU" && countryCovidData.date == dateString){
+            totalCases = totalCases + parseFloat(countryCovidData.total_cases);
+        }
+    });
+    return {label: formatDateForGraph(dateString), value: parseFloat(((totalCases/445000000)*100).toLocaleString())};
+}
+
 function getTotalWorldCasesForDate(dateString){
     let totalCases = 0;
     PARAMETERS.DATA.forEach((countryCovidData) => {
@@ -300,6 +358,19 @@ function getTotalWorldMortalityCasesForDate(dateString){
         }
     });
     return {label: formatDateForGraph(dateString), value: totalCases};
+}
+
+function getTotalWorldInfectionCasesForDate(dateString){
+    let totalRates = 0;
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(countryCovidData.date == dateString && countryCovidData.location == "World"){
+            let infectionRate = (parseFloat(countryCovidData.total_cases)/7800000000)*100;
+            totalRates = totalRates + infectionRate;
+            totalRates = parseFloat(totalRates.toLocaleString());
+            return {label: formatDateForGraph(dateString), value: parseFloat(totalRates.toLocaleString())};
+        }
+    });
+    return {label: formatDateForGraph(dateString), value: totalRates};
 }
 
 const drawLineChart = ({data, data2, data3, selector, option, colours}) => {
