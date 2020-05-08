@@ -62,6 +62,7 @@ function showMap(){
     });
     drawWorldMap(mapCoronaCases);
     fetchAllCasesDetails();
+    fetchAllMortalityDetails();
 }
 
 function reDrawWorldMap(selection){
@@ -209,32 +210,32 @@ function fetchAllCasesDetails(){
 }
 
 function fetchAllMortalityDetails(){
-    let allCasesForAssignedCountry = [];
-    let allCasesForNeighbourOne = [];
-    let allCasesForNeighbourTwo = [];
-    let allCasesForEurope = [];
-    let allCasesForWorld = [];
+    let allFatalCasesForAssignedCountry = [];
+    let allFatalCasesForNeighbourOne = [];
+    let allFatalCasesForNeighbourTwo = [];
+    let allFatalCasesForEurope = [];
+    let allFatalCasesForWorld = [];
     let allDates = [];
     PARAMETERS.DATA.forEach((countryCovidData) => {
         if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.countryCodeThree){
-            allCasesForAssignedCountry.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+            allFatalCasesForAssignedCountry.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_deaths)});
         }
         else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[0].countryCodeThree){
-            allCasesForNeighbourOne.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+            allFatalCasesForNeighbourOne.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_deaths)});
         }
         else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[1].countryCodeThree){
-            allCasesForNeighbourTwo.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+            allFatalCasesForNeighbourTwo.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_deaths)});
         }
         if(!allDates.includes(countryCovidData.date)){
             allDates.push(countryCovidData.date);
         }
     });
     allDates.forEach((dateString) => {
-        allCasesForEurope.push(getTotalEuropeCasesForDate(dateString));
-        allCasesForWorld.push(getTotalWorldCasesForDate(dateString));
+        allFatalCasesForEurope.push(getTotalEuropeMortalityCasesForDate(dateString));
+        allFatalCasesForWorld.push(getTotalWorldMortalityCasesForDate(dateString));
     });
-    allCasesForEurope.sort((a, b) => b.label - a.label);
-    allCasesForWorld.sort((a, b) => b.label - a.label)
+    allFatalCasesForEurope.sort((a, b) => b.label - a.label);
+    allFatalCasesForWorld.sort((a, b) => b.label - a.label)
     let colour5 = '#ed4900';
     let colour4 = '#090574';
     let colour3 = '#006f0d';
@@ -242,14 +243,14 @@ function fetchAllMortalityDetails(){
     let colour1 = '#00a2b4';
     const options = {
         format: 'd',
-        yLabel: 'Total Cases',
+        yLabel: 'Fatal Cases',
         title: ' '
     };
 
-    drawLineChart({data3: allCasesForAssignedCountry, data2: allCasesForNeighbourOne, data: allCasesForNeighbourTwo,
-        selector: "#container-all-corona-cases svg", option: options,
-        colours: [colour3,colour4,colour5]});
-    drawLineChart2({data2: allCasesForEurope, data: allCasesForWorld, selector: "#container-all-corona-cases-global svg", option: options,
+    drawLineChart({data3: allFatalCasesForAssignedCountry, data2:  allFatalCasesForNeighbourTwo, data:allFatalCasesForNeighbourOne,
+        selector: "#container-fatal-corona-cases svg", option: options,
+        colours: [colour4,colour3,colour5]});
+    drawLineChart2({data2: allFatalCasesForEurope, data: allFatalCasesForWorld, selector: "#container-fatal-corona-cases-global svg", option: options,
         colours: [colour1,colour2]});
 }
 
@@ -269,11 +270,32 @@ function getTotalEuropeCasesForDate(dateString){
     return {label: formatDateForGraph(dateString), value: totalCases};
 }
 
+function getTotalEuropeMortalityCasesForDate(dateString){
+    let totalCases = 0;
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(getCountryObjectWithThreeCode(countryCovidData.iso_code).continent == "EU" && countryCovidData.date == dateString){
+            totalCases = totalCases + parseInt(countryCovidData.total_deaths);
+        }
+    });
+    return {label: formatDateForGraph(dateString), value: totalCases};
+}
+
 function getTotalWorldCasesForDate(dateString){
     let totalCases = 0;
     PARAMETERS.DATA.forEach((countryCovidData) => {
         if(countryCovidData.date == dateString && countryCovidData.location == "World"){
             totalCases = totalCases + parseInt(countryCovidData.total_cases);
+            return {label: formatDateForGraph(dateString), value: totalCases};
+        }
+    });
+    return {label: formatDateForGraph(dateString), value: totalCases};
+}
+
+function getTotalWorldMortalityCasesForDate(dateString){
+    let totalCases = 0;
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(countryCovidData.date == dateString && countryCovidData.location == "World"){
+            totalCases = totalCases + parseInt(countryCovidData.total_deaths);
             return {label: formatDateForGraph(dateString), value: totalCases};
         }
     });
