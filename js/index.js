@@ -3,7 +3,11 @@ let PARAMETERS = {
     COUNTRIES : [],
     MAP_VIEWS: {TOTAL_CASES: "total-cases", POPULATION: "population", TOTAL_DEATHS: "total-deaths", INFECTION_RATES: "infection-rates",
         MORTALITY_RATES: "mortality-rates", NEW_CASES: "new-cases", NEW_DEATH: "new-deaths"},
-    SELECTED_MAP_VIEW : "total-cases"
+    SELECTED_MAP_VIEW : "total-cases",
+    ASSIGNED_COUNTRY: {countryName: "Netherlands", countryCode: "NL", countryCodeThree: "NLD", neighbours:[
+            {countryName: "Belgium", countryCode: "BE", countryCodeThree: "BEL"},
+            {countryName: "Germany", countryCode: "DE", countryCodeThree: "DEU"}
+        ]}
 };
 
 $(document).ready(function(){
@@ -23,7 +27,7 @@ $(document).ready(function(){
 function readCountries(data){
     data.forEach((countryInfo) => {
         PARAMETERS.COUNTRIES.push({countryName: countryInfo.country_name, population: parseInt(countryInfo.population), countryCode: countryInfo.country_code,
-            countryCodeThree: countryInfo.country_code_three, countryCapital: countryInfo.capital});
+            countryCodeThree: countryInfo.country_code_three, countryCapital: countryInfo.capital, continent: countryInfo.continent});
     });
     (async () => {
         const data = await d3.csv('js/covid-data.csv');
@@ -57,6 +61,7 @@ function showMap(){
         mapCoronaCases[country.countryCode] = country.totalCases;
     });
     drawWorldMap(mapCoronaCases);
+    fetchAllCasesDetails();
 }
 
 function reDrawWorldMap(selection){
@@ -137,6 +142,16 @@ function getCountryObject(countryCode){
     return countryObject;
 }
 
+function getCountryObjectWithThreeCode(countryCode){
+    let countryObject = {};
+    PARAMETERS.COUNTRIES.forEach((country) => {
+        if(country.countryCodeThree == countryCode){
+            countryObject = country;
+        }
+    });
+    return countryObject;
+}
+
 function formatDate(dateString){
     if(dateString == null || dateString == "" || dateString == undefined){
         return "";
@@ -148,6 +163,285 @@ function formatDate(dateString){
     return month+" "+day+", "+year;
 }
 
+function fetchAllCasesDetails(){
+    let allCasesForAssignedCountry = [];
+    let allCasesForNeighbourOne = [];
+    let allCasesForNeighbourTwo = [];
+    let allCasesForEurope = [];
+    let allCasesForWorld = [];
+    let allDates = [];
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.countryCodeThree){
+            allCasesForAssignedCountry.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+        }
+        else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[0].countryCodeThree){
+            allCasesForNeighbourOne.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+        }
+        else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[1].countryCodeThree){
+            allCasesForNeighbourTwo.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+        }
+        if(!allDates.includes(countryCovidData.date)){
+            allDates.push(countryCovidData.date);
+        }
+    });
+    allDates.forEach((dateString) => {
+        allCasesForEurope.push(getTotalEuropeCasesForDate(dateString));
+        allCasesForWorld.push(getTotalWorldCasesForDate(dateString));
+    });
+    allCasesForEurope.sort((a, b) => b.label - a.label);
+    allCasesForWorld.sort((a, b) => b.label - a.label)
+    let colour5 = '#ed4900';
+    let colour4 = '#090574';
+    let colour3 = '#006f0d';
+    let colour2 = '#cb16af';
+    let colour1 = '#00a2b4';
+    const options = {
+        format: 'd',
+        yLabel: 'Total Cases',
+        title: ' '
+    };
+
+    drawLineChart({data3: allCasesForAssignedCountry, data2: allCasesForNeighbourOne, data: allCasesForNeighbourTwo,
+        selector: "#container-all-corona-cases svg", option: options,
+        colours: [colour3,colour4,colour5]});
+    drawLineChart2({data2: allCasesForEurope, data: allCasesForWorld, selector: "#container-all-corona-cases-global svg", option: options,
+        colours: [colour1,colour2]});
+}
+
+function fetchAllMortalityDetails(){
+    let allCasesForAssignedCountry = [];
+    let allCasesForNeighbourOne = [];
+    let allCasesForNeighbourTwo = [];
+    let allCasesForEurope = [];
+    let allCasesForWorld = [];
+    let allDates = [];
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.countryCodeThree){
+            allCasesForAssignedCountry.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+        }
+        else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[0].countryCodeThree){
+            allCasesForNeighbourOne.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+        }
+        else if(countryCovidData.iso_code == PARAMETERS.ASSIGNED_COUNTRY.neighbours[1].countryCodeThree){
+            allCasesForNeighbourTwo.push({label: formatDateForGraph(countryCovidData.date), value: parseInt(countryCovidData.total_cases)});
+        }
+        if(!allDates.includes(countryCovidData.date)){
+            allDates.push(countryCovidData.date);
+        }
+    });
+    allDates.forEach((dateString) => {
+        allCasesForEurope.push(getTotalEuropeCasesForDate(dateString));
+        allCasesForWorld.push(getTotalWorldCasesForDate(dateString));
+    });
+    allCasesForEurope.sort((a, b) => b.label - a.label);
+    allCasesForWorld.sort((a, b) => b.label - a.label)
+    let colour5 = '#ed4900';
+    let colour4 = '#090574';
+    let colour3 = '#006f0d';
+    let colour2 = '#cb16af';
+    let colour1 = '#00a2b4';
+    const options = {
+        format: 'd',
+        yLabel: 'Total Cases',
+        title: ' '
+    };
+
+    drawLineChart({data3: allCasesForAssignedCountry, data2: allCasesForNeighbourOne, data: allCasesForNeighbourTwo,
+        selector: "#container-all-corona-cases svg", option: options,
+        colours: [colour3,colour4,colour5]});
+    drawLineChart2({data2: allCasesForEurope, data: allCasesForWorld, selector: "#container-all-corona-cases-global svg", option: options,
+        colours: [colour1,colour2]});
+}
+
+function formatDateForGraph(dateString){
+    let format = "%Y-%m-%d";
+    let dateParser = d3.timeParse(format);
+    return dateParser(dateString);
+}
+
+function getTotalEuropeCasesForDate(dateString){
+    let totalCases = 0;
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(getCountryObjectWithThreeCode(countryCovidData.iso_code).continent == "EU" && countryCovidData.date == dateString){
+            totalCases = totalCases + parseInt(countryCovidData.total_cases);
+        }
+    });
+    return {label: formatDateForGraph(dateString), value: totalCases};
+}
+
+function getTotalWorldCasesForDate(dateString){
+    let totalCases = 0;
+    PARAMETERS.DATA.forEach((countryCovidData) => {
+        if(countryCovidData.date == dateString && countryCovidData.location == "World"){
+            totalCases = totalCases + parseInt(countryCovidData.total_cases);
+            return {label: formatDateForGraph(dateString), value: totalCases};
+        }
+    });
+    return {label: formatDateForGraph(dateString), value: totalCases};
+}
+
+const drawLineChart = ({data, data2, data3, selector, option, colours}) => {
+    $(selector).html("");
+
+    const margin = {top: 80, right: 20, bottom: 20, left: 60},
+        width = $(selector).width() - margin.left - margin.right,
+        height = $(selector).height() - margin.top - margin.bottom;
+
+    const svg = d3.select(selector).attr('viewBox', [0, 0, width, height]);
+
+    const line = d3
+        .line()
+        .defined((d) => !isNaN(d.value))
+        .x((d) => x(d.label))
+        .y((d) => y(d.value));
+
+    const x = d3
+        .scaleUtc()
+        .domain(d3.extent(data, (d) => d.label))
+        .range([margin.left, width - margin.right]);
+    const y = d3
+        .scaleLinear()
+        .domain([0, d3.max(data, (d) => d.value)])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+    const xAxis = (g) =>
+        g.attr('transform', `translate(0,${height - margin.bottom})`).call(
+            d3
+                .axisBottom(x)
+                .ticks(width / 80)
+                .tickSizeOuter(0)
+        );
+    const yAxis = (g) =>
+        g
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y))
+            .call((g) =>
+                g
+                    .select('.tick:last-of-type text')
+                    .clone()
+                    .attr('x', -20)
+                    .attr('y', -20)
+                    .attr('text-anchor', 'start')
+                    .attr('font-weight', 'bold')
+                    .attr('fill', 'currentColor')
+                    .text(option.yLabel)
+            );
+
+    svg.append('g').call(xAxis);
+    svg.append('g').call(yAxis);
+    svg
+        .append('path')
+        .datum(data)
+        .attr('fill', 'none')
+        .attr('stroke', colours[0])
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line);
+    svg
+        .append('path')
+        .datum(data2)
+        .attr('fill', 'none')
+        .attr('stroke', colours[1])
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line);
+    svg
+        .append('path')
+        .datum(data3)
+        .attr('fill', 'none')
+        .attr('stroke', colours[2])
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line);
+    svg
+        .append('text')
+        .attr('class', 'title')
+        .attr('x', width / 2)
+        .attr('y', margin.top / 4)
+        .attr('text-anchor', 'middle')
+        .text(option.title);
+};
+
+const drawLineChart2 = ({data, data2, selector, option, colours}) => {
+    $(selector).html("");
+
+    const margin = {top: 80, right: 20, bottom: 20, left: 60},
+        width = $(selector).width() - margin.left - margin.right,
+        height = $(selector).height() - margin.top - margin.bottom;
+
+    const svg = d3.select(selector).attr('viewBox', [0, 0, width, height]);
+
+    const line = d3
+        .line()
+        .defined((d) => !isNaN(d.value))
+        .x((d) => x(d.label))
+        .y((d) => y(d.value));
+
+    const x = d3
+        .scaleUtc()
+        .domain(d3.extent(data, (d) => d.label))
+        .range([margin.left, width - margin.right]);
+    const y = d3
+        .scaleLinear()
+        .domain([0, d3.max(data, (d) => d.value)])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+    const xAxis = (g) =>
+        g.attr('transform', `translate(0,${height - margin.bottom})`).call(
+            d3
+                .axisBottom(x)
+                .ticks(width / 80)
+                .tickSizeOuter(0)
+        );
+    const yAxis = (g) =>
+        g
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y))
+            .call((g) =>
+                g
+                    .select('.tick:last-of-type text')
+                    .clone()
+                    .attr('x', -20)
+                    .attr('y', -20)
+                    .attr('text-anchor', 'start')
+                    .attr('font-weight', 'bold')
+                    .attr('fill', 'currentColor')
+                    .text(option.yLabel)
+            );
+
+    svg.append('g').call(xAxis);
+    svg.append('g').call(yAxis);
+    svg
+        .append('path')
+        .datum(data)
+        .attr('fill', 'none')
+        .attr('stroke', colours[0])
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line);
+    svg
+        .append('path')
+        .datum(data2)
+        .attr('fill', 'none')
+        .attr('stroke', colours[1])
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line);
+    svg
+        .append('text')
+        .attr('class', 'title')
+        .attr('x', width / 2)
+        .attr('y', margin.top / 4)
+        .attr('text-anchor', 'middle')
+        .text(option.title);
+};
 
 const drawHorizontalBarChart = ({ data, selector, option , colour}) => {
     $(selector).html("");
