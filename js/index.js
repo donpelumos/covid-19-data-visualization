@@ -1,6 +1,9 @@
 let PARAMETERS = {
     DATA : [],
-    COUNTRIES : []
+    COUNTRIES : [],
+    MAP_VIEWS: {TOTAL_CASES: "total-cases", POPULATION: "population", TOTAL_DEATHS: "total-deaths", INFECTION_RATES: "infection-rates",
+        MORTALITY_RATES: "mortality-rates", NEW_CASES: "new-cases", NEW_DEATH: "new-deaths"},
+    SELECTED_MAP_VIEW : "total-cases"
 };
 
 $(document).ready(function(){
@@ -11,6 +14,8 @@ $(document).ready(function(){
 
     $("#world-map-selector").change(function(){
         let selection = $(this).children("option:selected").val();
+        PARAMETERS.SELECTED_MAP_VIEW = selection;
+        $("#world-map-selected-text").html(selection.replace("-"," ").toUpperCase());
         reDrawWorldMap(selection);
     });
 });
@@ -38,7 +43,8 @@ function readDataFile(data) {
                 country.infectionRate = parseFloat(infectionRate.toLocaleString());
                 let mortalityRate = (parseFloat(countryCovidData.total_deaths)/parseFloat(countryCovidData.total_cases))*100;
                 country.mortalityRate = parseFloat(mortalityRate.toLocaleString());
-
+                country.newCases = parseInt(countryCovidData.new_cases);
+                country.newDeaths = parseInt(countryCovidData.new_deaths);
             }
         });
     });
@@ -59,12 +65,16 @@ function reDrawWorldMap(selection){
     let mapCoronaDeaths = {};
     let mapCoronaInfectionRates = {};
     let mapCoronaDeathRates = {};
+    let mapCoronaNewCases = {};
+    let mapCoronaNewDeaths = {};
     PARAMETERS.COUNTRIES.forEach((country) => {
         mapPopulations[country.countryCode] = country.population;
         mapCoronaCases[country.countryCode] = country.totalCases == null || isNaN(country.totalCases) == null || country.totalCases == undefined ? 0 : country.totalCases;
         mapCoronaDeaths[country.countryCode] = country.totalDeaths == null || isNaN(country.totalDeaths) == null || country.totalDeaths == undefined ? 0 : country.totalDeaths;
         mapCoronaInfectionRates[country.countryCode] = country.infectionRate == null || isNaN(country.infectionRate) || country.infectionRate == undefined ? 0 : country.infectionRate;
         mapCoronaDeathRates[country.countryCode] = country.mortalityRate == null || isNaN(country.mortalityRate) || country.mortalityRate == undefined ? 0 : country.mortalityRate;
+        mapCoronaNewCases[country.countryCode] = country.newCases == null || isNaN(country.newCases) || country.newCases == undefined ? 0 : country.newCases;
+        mapCoronaNewDeaths[country.countryCode] = country.newDeaths == null || isNaN(country.newDeaths) || country.newDeaths == undefined ? 0 : country.newDeaths;
     });
     if(selection == "total-cases"){
         drawWorldMap(mapCoronaCases);
@@ -80,6 +90,12 @@ function reDrawWorldMap(selection){
     }
     else if(selection == "mortality-rates"){
         drawWorldMap(mapCoronaDeathRates);
+    }
+    else if(selection == "new-cases"){
+        drawWorldMap(mapCoronaNewCases);
+    }
+    else if(selection == "new-deaths"){
+        drawWorldMap(mapCoronaNewDeaths);
     }
 }
 
@@ -104,7 +120,9 @@ function drawWorldMap(data){
                 "<br> Total Deaths - "+ getCountryObject(code).totalDeaths.toLocaleString() +
                 "<br> Date - "+ getCountryObject(code).recentDate.toLocaleString() +
                 "<br> Infection Rate - "+ getCountryObject(code).infectionRate.toLocaleString()+"%"+
-                "<br> Mortality Rate - "+ getCountryObject(code).mortalityRate.toLocaleString()+"%");
+                "<br> Mortality Rate - "+ getCountryObject(code).mortalityRate.toLocaleString()+"%"+
+                "<br> New Cases - "+ getCountryObject(code).newCases.toLocaleString()+
+                "<br> New Deaths - "+ getCountryObject(code).newDeaths.toLocaleString());
         }
     });
 }
